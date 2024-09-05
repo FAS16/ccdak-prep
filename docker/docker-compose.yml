@@ -1,0 +1,152 @@
+services:
+  kafka-broker-1:
+    build: ./kafka
+    container_name: kafka-broker-1
+    image: ccdak-prep-kafka:latest
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: EXTERNAL://:29092,INTERNAL://:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-broker-1:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+#      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+#      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+    depends_on:
+      - zookeeper
+    ports:
+      - "29092:29092"
+    networks:
+      - kafka-cluster-network
+    volumes:
+      - kafka-broker-1:/var/lib/kafka/data #- ./volume/kafka-broker-1:/var/lib/kafka/data
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+
+#  kafka-streams-app:
+#    build:
+#      context: ../kafka-streams-api
+##    command: java -jar /app.jar com.ccdakprep.joins.Main
+#    depends_on:
+#      - kafka-broker-1
+#      - zookeeper
+#    networks:
+#      - kafka-cluster-network
+
+
+  kafka-broker-2:
+    build: ./kafka
+    container_name: kafka-broker-2
+    image: ccdak-prep-kafka:latest
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: EXTERNAL://:29093,INTERNAL://:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-broker-2:9092,EXTERNAL://localhost:29093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+    depends_on:
+      - zookeeper
+    networks:
+      - kafka-cluster-network
+    ports:
+      - "29093:29093"
+    volumes:
+      - kafka-broker-2:/var/lib/kafka/data #- ./volume/kafka-broker-2:/var/lib/kafka/data
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+
+  kafka-broker-3:
+    build: ./kafka
+    container_name: kafka-broker-3
+    image: ccdak-prep-kafka:latest
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: EXTERNAL://:29094,INTERNAL://:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-broker-3:9092,EXTERNAL://localhost:29094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+    depends_on:
+      - zookeeper
+    networks:
+      - kafka-cluster-network
+    ports:
+      - "29094:29094"
+    volumes:
+      - kafka-broker-3:/var/lib/kafka/data #- ./volume/kafka-broker-3:/var/lib/kafka/data
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+
+  zookeeper:
+    build: ./zookeeper
+    container_name: zookeeper
+    image: ccdak-prep-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - kafka-cluster-network
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data #- ./volume/zookeeper/data:/var/lib/zookeeper/data
+      - zookeeper-log:/var/lib/zookeeper/log # ./volume/zookeeper/log:/var/lib/zookeeper/log
+      - /etc/localtime:/etc/localtime:ro
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    container_name: schema-registry
+    depends_on:
+      - zookeeper
+      - kafka-broker-1
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka-broker-1:9092
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: PLAINTEXT
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://schema-registry:8085
+      SCHEMA_REGISTRY_SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL: "http"
+      SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: INFO
+      SCHEMA_REGISTRY_KAFKASTORE_TOPIC: _schemas
+    ports:
+      - "8085:8085"
+    networks:
+      - kafka-cluster-network
+    restart: always
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui
+    ports:
+      - "8088:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker-1:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8085
+    depends_on:
+      - kafka-broker-1
+      - zookeeper
+      - schema-registry
+    networks:
+      - kafka-cluster-network
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+
+networks:
+  kafka-cluster-network:
+    name: kafka-cluster-network
+    driver: bridge
+
+volumes:
+  kafka-broker-1:
+  kafka-broker-2:
+  kafka-broker-3:
+  zookeeper-data:
+  zookeeper-log:
+
+    # https://www.youtube.com/watch?v=L--VuzFiYrM - Running Apache Kafka in Docker
+    # https://github.com/wurstmeister/kafka-docker/issues/389 - Node already exists error
+    # https://stackoverflow.com/questions/61002881/docker-compose-doesnt-save-data-in-volume
+    # run docker compose rm -svf for a fresh clean environment
+    #  docker compose up --build -d
+  # docker compose down -v --remove-orphans

@@ -1,0 +1,58 @@
+## BASE KAFKA COMMAND
+kafka-topics --bootstrap-server localhost:9092
+
+## CREATE TOPIC
+kafka-topics --bootstrap-server localhost:9092 --create --topic counting-topic --partitions 3 --replication-factor 2
+
+## DESCRIBE TOPICS
+kafka-topics --bootstrap-server localhost:9092 --describe --topic count-topic
+
+## KAFKA CONSOLE PRODUCER (send messages like: key:value)
+kafka-console-producer --broker-list localhost:9092 --topic joins-input-topic-left --property parse.key=true --property key.seperator=:
+docker run it --rm --network kafka-cluster-network kafka-console-producer --bootstrap-server kafka-broker-1:9092 --topic joins-input-topic-left --property parse.key=true --property key.seperator=:
+
+## KAFKA CONSOLE CONSUMER
+kafka-console-consumer --boostrap-server localhost:9092 --topic streams-output-topic --property print.key=true
+
+## CONSUME FROM BEGINNING
+kafka-console-consumer --bootstrap-server localhost:9092 --topic count-topic --from-beginning
+
+## LIST TOPICS
+kafka-topics --bootstrap-server localhost:9092 --list
+
+## DESCRIBE (LIST) CONFIGURATIONS FOR BROKER (Returns nothing if defaults are used)
+kafka-configs --bootstrap-server localhost:9092 --entity-type brokers --entity-name 1 --describe
+
+## CHANGE A BROKER CONFIGURATION
+kafka-configs --bootstrap-server localhost:9092 --entity-type brokers --entity-name 1 --alter --add-config log.cleaner.threads=2
+
+## CHANGE A BROKER-WIDE CONFIGURATION
+kafka-configs --bootstrap-server localhost:9092 --entity-type brokers --entity-name 1 --alter --add-config message.max.bytes=66000
+
+## CREATE A TOPIC WITH A PARTICULAR CONFIGURATION (NON-DEFAULT)
+kafka-topics --bootstrap-server localhost:9092 --create --topic my-configured-topic --partitions 1 --replication-factor 1 --config max.message.bytes=64000
+
+## DESCRIBE (LIST) CONFIGURATIONS FOR A TOPIC
+kafka-configs --bootstrap-server localhost:9092 --entity-type topics --entity-name my-configured-topic --describe
+
+## CHANGE A TOPIC CONFIGURATION
+kafka-configs --bootstrap-server localhost:9092 --entity-type topics --entity-name my-configured-topic --alter --add-config max.message.bytes=65000
+
+## DOCKER - BUILD IMAGE FROM DOCKERFILE
+docker build -t ccdak-prep-kafka:latest -f Dockerfile .
+docker build -t ccdak-prep-zookeeper:latest -f Dockerfile .
+
+## DOCKER - SPIN UP PRODUCER CONTAINER
+docker run -it --rm --network kafka-cluster-network confluentinc/cp-kafka /bin/kafka-console-producer --bootstrap-server kafka-broker-1:9092 --topic joins-input-topic-right --property parse.key=true --property key.separator=:
+
+## DOCKER - SPIN UP CONSUMER CONTAINER
+docker run -it --rm --network kafka-cluster-network confluentinc/cp-kafka /bin/kafka-console-consumer --bootstrap-server kafka-broker-1:9092 --topic outer-join-output-topic --property print.key=true
+
+## DOCKER - Network not found even though it is created
+docker-compose up --remove-orphans
+
+## DOCKER - IT Shell
+docker exec -it container-name /bin/sh
+
+## DOCKER - Create network
+docker network create kafka-cluster-network

@@ -1,0 +1,29 @@
+{
+  "namespace": "com.ccdakprep",
+  "type": "record", // Complex data type with multiple fields
+  "compatibility" : "BACKWARD", // Default
+  "name": "Person",
+  "fields": [
+    {
+      "name": "id",
+      "type": "int"
+    },
+    {
+      "name": "first_name",
+      "type": "string"
+    },
+    {
+      "name": "last_name",
+      "type": "string"
+    },
+    {
+      "name": "email",
+      "type": "string"
+    },
+    {
+      "name": "twitter",
+      "type": "string",
+      "default": "" // Makes this field optional
+    }
+  ]
+}
